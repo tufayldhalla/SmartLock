@@ -1,12 +1,10 @@
 # GPIO Config
 
 print_reader_connection = [0]
-camera_connection = [0]
 
 
-# Arduino Setup
+# Arduino Config
 
-lcd_pins = [0]
-keypad_pins = [0]
-stepper_pins = [0]
+arduino_serial_port = "/dev/ttyACM0"
+arduino_baud = 9600
 

@@ -1,6 +1,7 @@
 # DEVICES MODULE
 
 from components import config
+import serial
 
 
 """
@@ -10,37 +11,40 @@ class Arduino:
     
     def __init__(self):
         
-        self.lcd = LCD(config.lcd_pins)
-        self.keypad = Keypad(config.keypad_pins)
-        self.stepper = Stepper(config.stepper_pins)
-        
-        
-"""
-Keypad Handler Class
-"""
-class Keypad:
+        self.serial = serial.Serial(config.arduino_serial_port, config.arduino_baud)    
     
-    def __init__(self, pins):
-        
-        self.pins = pins
-        
-        
-"""
-LCD Handler Class
-"""
-class LCD:
     
-    def __init__(self, pins):
+    """
+    write data string to serial port
+    """
+    def write(self, data):
         
-        self.pins = pins
+        self.serial.write(str(data).encode())
     
-
-"""
-Stepper Handler Class
-"""
-class Stepper:
     
-    def __init__(self, pins):
+    """
+    read serial port and return data string
+    """
+    def read(self):
         
-        self.pins = pins
+        return (self.serial.readline().decode()).rstrip("\r\n")
     
+    
+    
+"""
+Print Reader Handler Class
+"""
+class PrintReader:
+    
+    def __init__(self, connection):
+        
+        self.connection = connection
+        
+    
+    """
+    Fingerprint Profile Definition
+    """
+    class FProfile:
+        
+        def __init__(self):
+            pass

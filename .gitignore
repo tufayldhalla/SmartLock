@@ -3,6 +3,18 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Images
+*.jpg
+*.png
+
+# Memo Files
+memos/
+
+#VIM
+*.swp
+*.swn
+*.swo
+
 # C extensions
 *.so
 
@@ -53,6 +65,8 @@ coverage.xml
 
 # Django stuff:
 *.log
+*.db
+*.db-journal
 local_settings.py
 db.sqlite3
 
