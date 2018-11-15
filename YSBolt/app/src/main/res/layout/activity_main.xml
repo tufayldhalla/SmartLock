@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity">
+
+    <ImageView
+        android:id="@+id/Background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/background"
+        android:scaleType="centerCrop"/>
+
+    <TextView
+        android:text="YSBolt"
+        android:id="@+id/Name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="cursive"
+        android:paddingLeft="5dp"
+        android:layout_centerHorizontal="true"
+        android:textColor="#000"
+        android:textSize="36sp"/>
+
+    <ImageView
+        android:id="@+id/Logo"
+        android:layout_width="100dp"
+        android:layout_height="50dp"
+        android:layout_toRightOf="@id/Name"
+        android:src="@drawable/jokelogo"/>
+
+    <TextView
+        android:text="Notifications:"
+        android:id="@+id/notifications"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textStyle="bold"
+        android:layout_below="@id/Name"
+        android:paddingLeft="5dp"
+        android:textColor="#000"
+        android:textSize="36sp"/>
+
+    <TextView
+        android:id="@+id/notify"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:scrollbars="vertical"
+        android:layout_margin="16dp"
+        android:text="This is where I would have a notification."
+        android:layout_below="@id/notifications"/>
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Click her to check on door 1!"
+        android:id="@+id/door1button"
+        android:layout_below="@id/notify"
+        android:layout_centerHorizontal="true"
+        android:scaleType="centerCrop"
+        android:contextClickable="true"/>
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Click here to check on door 1!"
+        android:src="@drawable/door2"
+        android:id="@+id/door2button"
+        android:layout_below="@id/door1button"
+        android:layout_centerHorizontal="true"
+        android:scaleType="centerCrop"
+        android:contextClickable="true"/>
+
+
+</RelativeLayout>
+

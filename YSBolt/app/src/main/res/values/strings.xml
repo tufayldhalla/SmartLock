@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">YSBolt</string>
+    <string name="title_activity_door1">Door1Activity</string>
+    <string name="title_activity_login">LoginActivity</string>
+</resources>
