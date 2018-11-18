@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".Door1Activity">
+
+    <ImageView
+        android:id="@+id/Background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/background"
+        android:scaleType="centerCrop"/>
+
+    <TextView
+        android:text="YSBolt"
+        android:id="@+id/Name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="cursive"
+        android:paddingLeft="5dp"
+        android:layout_centerHorizontal="true"
+        android:textColor="#000"
+        android:textSize="36sp"/>
+
+    <ImageView
+        android:id="@+id/Logo"
+        android:layout_width="100dp"
+        android:layout_height="50dp"
+        android:layout_toRightOf="@id/Name"
+        android:src="@drawable/jokelogo"/>
+
+    <TextView
+        android:id="@+id/notifications"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textStyle="bold"
+        android:layout_below="@id/Name"
+        android:paddingLeft="5dp"
+        android:textColor="#000"
+        android:textSize="36sp"/>
+
+    <TextView
+        android:text="Picture received today below."
+        android:id="@+id/Picture"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/notifications"
+        android:paddingLeft="5dp"
+        android:textColor="#000" />
+
+    <ImageView
+        android:id="@+id/doorpicture"
+        android:layout_width="wrap_content"
+        android:layout_height="200dp"
+        android:layout_below="@id/Picture"
+        android:src="@drawable/door_image"/>
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Lock Door!"
+        android:layout_below="@id/doorpicture"
+        android:id="@+id/lockbutton"/>
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Unlock Door!"
+        android:id="@+id/unlockbutton"
+        android:layout_toRightOf="@id/lockbutton"
+        android:layout_below="@id/doorpicture"/>
+
+</RelativeLayout>
+
