@@ -11,7 +11,9 @@ class Arduino:
     
     def __init__(self):
         
-        self.serial = serial.Serial(config.arduino_serial_port, config.arduino_baud)    
+        self.serial = serial.Serial(config.arduino_serial_port,
+                                    config.arduino_baud, 
+                                    timeout=config.arduino_timeout)    
     
     
     """

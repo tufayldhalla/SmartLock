@@ -12,7 +12,7 @@ class Camera:
         self.camera = PiCamera()
         self.num_pics = 0
 
-    def takePicture(self):
+    def take_picture(self):
 
         time.sleep(1)
         self.camera.capture('{}.jpg'.format(self.num_pics))

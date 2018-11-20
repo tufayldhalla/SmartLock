@@ -4,6 +4,8 @@ class ApplicationServer():
     
     def __init__(self):
         
+        self.ID = 'S'
+
         self.init_log()
         self.init_db()        
         
@@ -30,8 +32,9 @@ class ApplicationServer():
             # note: Access_Level ranked low to high; 1 to 3            
             self.curr.execute('CREATE TABLE Users (Name TEXT, Pass INTEGER, Date_Added TEXT, Access_Level INTEGER, PRIMARY KEY (Pass))')
         
-        except sqlite3.OperationalError as soe:
-            self.log.error(soe)
+        except sqlite3.OperationalError:
+            d = {'identifier': '{}'.format(self.ID)}
+            self.log.error(self.formatter.formatException(sys.exc_info()), extra=d)
         
         # $ FOR TESTING 1 ENTRY HAS BEEN ADDED
         self.curr.execute('INSERT INTO Users VALUES("bigdaddy6969", 8008, "09-11-2018", 3)')
@@ -43,68 +46,106 @@ class ApplicationServer():
         
         logging.basicConfig( filename = "server.log",
                              level = logging.DEBUG,
-                             format = "\%(asctime)s \%(levelname)s \%(name)s \%(message)s"
-                             )
+                             format = "\%(asctime)s \%(levelname)s \%(identifier)s \%(message)s\n"
+                             )        
         self.log = logging.getLogger()       
-    
+        self.formatter = logging.Formatter("\%(asctime)s \%(levelname)s \%(identifier)s \%(message)s\n")
     
     """
     main loop
     """
     def run(self):
-        
         self.client_sockets.append(self.server_socket)
         
+        print("DEBUG: running")
         while True:
-            print("DEBUG: running")
         
-            rsockets, wsockets, esockets = select.select(self.client_sockets, [], [])
+            rsockets, wsockets, esockets = select.select(self.client_sockets, [], [], 0)
         
             for socket in rsockets:        
                 if socket == self.server_socket:
-        
+                    print(1) 
                     client_socket, client_address = self.server_socket.accept()
+                    print(client_address)
                     self.client_sockets.append(client_socket)                   
                     
                 else:                    
                     try:
+                        print(2)
                         msg = socket.recv(4096)                        
+                        print(msg)
+                        print(msg.decode())
                         
                         if msg:                            
-                            msg_header, msg_str = msg.decode().split('\x00')
+                            msg_header, msg_str, msg_sender = self.parse_packet(msg)
                             
                             if msg_header == "CMD":
                                 
                                 if msg_str == "PIN CHECK":
                                     # get ready to receive pin
                                     
-                                    socket.sendall(self.make_bytes_packet("ACK", "PIN CHECK"))                                    
+                                    socket.sendall(self.make_packet("ACK", "PIN CHECK"))
+                                        
                                     
                                     pin = socket.recv(4096)
                                     
                                     if pin:
-                                        pin_header, pin_str = pin.decode().split('\x00')
+                                        pin_header, pin_str, pin_sender = self.parse_packet(pin)
                                         
                                         if pin_header == "DATA":                                                
                                             name = self.search_db(int(pin_str))
                                         
                                             if name:
-                                                socket.sendall(self.make_bytes_packet("DATA", name))
+                                                socket.sendall(self.make_packet("DATA", name))
                                             
                                             else:
-                                                socket.sendall(self.make_bytes_packet("DATA", "PIN CHECK FAIL"))                                    
-                                        
+                                                socket.sendall(self.make_packet("DATA", "PIN CHECK FAIL"))                                    
+                                
+                                try:
+                                    msg_str, door_number = msg_str.split('&')
+
+                                    if msg_str == "LOCK DOOR":
+                                        # get ready to lock door
+                                    
+                                        socket.sendall(self.make_packet("ACK", "LOCK DOOR"))
+                                    
+                                        print("BIRAT LOCK")
+                                
+                                    elif msg_str == "UNLOCK DOOR":
+                                        # get ready to unlcok door
+
+                                        socket.sendall(self.make_packet("ACK", "UNLOCK DOOR"))
+
+                                        print("BIRAT UNLOCK")
+
+                                except Exception as e:
+                                    print(e)
+                                    
+
+                            
+                            elif msg_header == "ERROR":
+                                d = {'identifier': '{}'.format(msg_sender)}
+                                self.log.error(msg_str, extra=d)
+                                pass
+                                
                             else:
-                                socket.sendall(self.make_bytes_packet("ERROR", "INVALID PROTOCOL"))
-                    
+                                print("GOT THIS")
+                                socket.sendall(self.make_packet("ERROR", "INVALID PROTOCOL"))
+                        
                     
                     except Exception as e:
+                        print(3)
+                        print(e)
+                        d = {'identifier': '{}'.format(self.ID)}
+                        self.log.error(self.formatter.formatException(sys.exc_info()), extra=d)
+                        continue
+
+                    finally:
+                        print(4)
                         socket.close()
                         self.client_sockets.remove(socket)
-                        print(e)
-                        #self.log.error(e)
-                        continue
-                        
+        
+        self.server_socket.close()                
     
     """
     search database for specified query, currently only searches for PIN
@@ -129,6 +170,16 @@ class ApplicationServer():
     """
     make an packet guy
     """
-    def make_bytes_packet(self, type, data):
+    def make_packet(self, type, data):
         
-        return ("{}\x00{}".format(type, data)).encode()
+        return ("{}\x00{}\x00{}".format(type, data, self.ID)).encode()
+    
+    
+    
+    """
+    deconstruct packet
+    """
+    def parse_packet(self, data):
+        
+        return data.decode().split('\x00')
+        
