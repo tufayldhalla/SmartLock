@@ -19,20 +19,20 @@ public class Door2Activity extends AppCompatActivity {
 
     Button lockButton;
     Button unlockButton;
+
     String appName = "YSBolt";
     final int DOORNUMBER = 2;
-
-
-    public final String lockCommand = "CMD\0LOCK DOOR\0" + Integer.toString(DOORNUMBER);
-    public final String unlockCommand = "CMD\0UNLOCK DOOR\0" + Integer.toString(DOORNUMBER);
-    private InetAddress IPADDRESS;
-    private int portNum = 2018;
+    //TODO: Change the packets to the same formart as Door 1
+    final String lockCommand = "CMD\0LOCK DOOR&" + Integer.toString(DOORNUMBER) + "\0M";
+    final String unlockCommand = "CMD\0UNLOCK DOOR&" + Integer.toString(DOORNUMBER) + "\0M";
+    InetAddress IPADDRESS;
+    int portNum = 2018;
+    String myIP = "192.168.0.21";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_door2);
-
         setTitle("Door 2");
 
         lockButton = (Button)findViewById(R.id.lockbutton);
@@ -40,7 +40,7 @@ public class Door2Activity extends AppCompatActivity {
 
         //Create an IPAddress
         try{
-            IPADDRESS = InetAddress.getByName("192.168.0.21");
+            IPADDRESS = InetAddress.getByName(myIP);
         }catch(UnknownHostException e){
             e.printStackTrace();
         }
@@ -114,14 +114,14 @@ public class Door2Activity extends AppCompatActivity {
                 System.out.println("Packet sent:    " + message);
 
 
-                //Receiving ACK froom the input stream
+                //Receiving ACK from the input stream
                 BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 messageReceived = in.readLine();
-                System.out.println("Ack packet recceived:   " + messageReceived);
+                System.out.println("Ack packet received:   " + messageReceived);
 
                 socket.close();
-
                 //  }//end while(true)
+
             } catch (Exception e) {
                 e.printStackTrace();
             }//end catch

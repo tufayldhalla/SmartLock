@@ -3,32 +3,49 @@ package at.dhungana.birat.ysbolt;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Base64;
+import android.util.Log;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.content.Intent;
 import android.widget.Button;
-
-
-import org.w3c.dom.Text;
-
-import java.io.*;
-import java.net.*;
-
+import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.SocketException;
+import java.net.UnknownHostException;
 
 public class Door1Activity extends AppCompatActivity{
-
+    //App variables
     Button lockButton;
     Button unlockButton;
+    ImageView doorPicture;
+
+    //Sender variables
     String appName = "YSBolt";
+    String myIP = "192.168.0.21";
+    int portNum = 2018;
+    InetAddress IPADDRESS;
     final int DOORNUMBER = 1;
+    final String LOCKCOMMAND = "CMD\0LOCK DOOR&" + Integer.toString(DOORNUMBER) + "\0M";
+    final String UNLOCKCOMMAND = "CMD\0UNLOCK DOOR&" + Integer.toString(DOORNUMBER) + "\0M";
 
+    //Receiver variables
+    DataOutputStream dataOutputStream = null;
+    DataInputStream dataInputStream = null;
+    Socket socket;
 
-    public final String lockCommand = "CMD\0LOCK DOOR\0" + Integer.toString(DOORNUMBER);
-    public final String unlockCommand = "CMD\0UNLOCK DOOR\0" + Integer.toString(DOORNUMBER);
-    private InetAddress IPADDRESS;
-    private int portNum = 2018;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,14 +55,60 @@ public class Door1Activity extends AppCompatActivity{
 
         lockButton = (Button)findViewById(R.id.lockbutton);
         unlockButton = (Button)findViewById(R.id.unlockbutton);
+        doorPicture = (ImageView)findViewById(R.id.doorpicture);
 
         //Create an IPAddress
         try{
-            IPADDRESS = InetAddress.getByName("192.168.0.21");
+            IPADDRESS = InetAddress.getByName(myIP);
         }catch(UnknownHostException e){
             e.printStackTrace();
         }
 
+//        //Receiving a picture on the phone
+//        try {
+//             socket = new Socket(IPADDRESS, portNum);
+//
+//             dataInputStream = new DataInputStream(socket.getInputStream());
+//
+//             String base64Code = dataInputStream.readUTF();
+//
+//             Log.d("String", ":" + base64Code);
+//
+//             byte[] decodedString = null;
+//             try{
+//                 decodedString = Base64.decode(base64Code, Base64.DEFAULT);
+//             }catch (Exception e){
+//                 e.printStackTrace();
+//                 Log.d("ERROR HERE", "" + e);
+//             }
+//             Log.d("St--",":" +decodedString.length);
+//
+//            Bitmap bitmap = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
+//            doorPicture.setImageBitmap(bitmap);
+//
+//        }catch(UnknownHostException e) {
+//            e.printStackTrace();
+//        }catch (Exception e ){
+//            e.printStackTrace();
+//        }finally {
+//            if(socket != null){
+//                try{
+//                    socket.close();
+//                }catch(IOException e){
+//                    e.printStackTrace();
+//                }
+//            }//end if - Socket
+//
+//            if(dataInputStream != null){
+//                try{
+//                    dataInputStream.close();
+//                }catch(IOException e){
+//                    e.printStackTrace();
+//                }
+//            }//end if - dataInputStream
+//
+//        }//end finally
+//
 
 
         lockButton.setOnClickListener(new View.OnClickListener() {
@@ -53,7 +116,7 @@ public class Door1Activity extends AppCompatActivity{
             public void onClick(View v) {
 
                 //Connection bits - send the lock command packet to the RPi
-                Thread lockSender = new Thread(new Sender(IPADDRESS, portNum, lockCommand));
+                Thread lockSender = new Thread(new Sender(IPADDRESS, portNum, LOCKCOMMAND));
                 lockSender.start();
 
 
@@ -72,31 +135,23 @@ public class Door1Activity extends AppCompatActivity{
             @Override
             public void onClick(View v){
                 //Connection bits - send the unlock command packet to the RPi;
-                Thread unlockSender = new Thread(new Sender(IPADDRESS, portNum, unlockCommand));
+                Thread unlockSender = new Thread(new Sender(IPADDRESS, portNum, UNLOCKCOMMAND));
                 unlockSender.start();
 
 
                 //Notification after door has been unlocked.
-                NotificationManager notif = (NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
-                Notification notify = new Notification.Builder(getApplicationContext()).setContentTitle("Door 1 Unlocked!").setContentText("Door 1 is now locked.").setContentTitle(appName)
+                NotificationManager notifUN = (NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
+                Notification notifyUN = new Notification.Builder(getApplicationContext()).setContentTitle("Door 1 Unlocked!").setContentText("Door 1 is now locked.").setContentTitle(appName)
                         .setSmallIcon(R.drawable.jokelogo).build();
 
-                notify.flags |= Notification.FLAG_AUTO_CANCEL;
-                notif.notify(0, notify);
+                notifyUN.flags |= Notification.FLAG_AUTO_CANCEL;
+                notifUN.notify(0, notifyUN);
             }
         });
 
+    }//end onCreate
 
-
-        //Getting the data from MainActivity to Door1Activity.
-        Intent intent1 = getIntent();
-        String message = intent1.getStringExtra("message");
-        TextView textView = (TextView)findViewById(R.id.notifications);
-        textView.setText(message);
-
-    }
-
-    //------------------------Client for using TCP connection.------------------------------------------
+    //------------------------Sending Client for using TCP connection.------------------------------------------
 
     private class Sender implements Runnable{
         int port;
@@ -105,7 +160,14 @@ public class Door1Activity extends AppCompatActivity{
         String messageReceived;
 
 
-        public Sender(InetAddress ip, int port, String message){ //Constructor
+        /**
+         * This is a constructor Sender class.
+         *
+         * @param ip
+         * @param port
+         * @param message
+         */
+        public Sender(InetAddress ip, int port, String message){
             this.port=port;
             this.ip=ip;
             this.message=message;
@@ -117,18 +179,17 @@ public class Door1Activity extends AppCompatActivity{
             try {
                 Socket socket = new Socket(ip, port);
 
-                //initiate input and output streams
+                //initiate input stream
                 DataOutputStream cmdOut = new DataOutputStream(socket.getOutputStream());
 
                // while (true) {
-                        cmdOut.writeBytes(message); //convert them into bytes
+                        cmdOut.writeBytes(message); //Convert the command to bytes.
                         System.out.println("Packet sent:   " + message);
 
-
-                        //Receiving ACK froom the input stream
+                        //Receiving ACK from the input stream
                         BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                         messageReceived = in.readLine();
-                        System.out.println(messageReceived);
+                        System.out.println("Ack packet received:   " + messageReceived);
 
                         socket.close();
 
