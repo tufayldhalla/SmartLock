@@ -4,5 +4,5 @@ if __name__ == '__main__':
     
     debug = input("DEBUG? (y/n)  >>> ")
 
-    lock = DoorLock('D1', debug)
+    lock = DoorLock('D1', debug, 'n')
     lock.run()
