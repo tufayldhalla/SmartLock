@@ -68,10 +68,9 @@
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Open Door!"
+        android:text="Unlock Door!"
         android:id="@+id/unlockbutton"
         android:layout_toRightOf="@id/lockbutton"
         android:layout_below="@id/doorpicture"/>
 
 </RelativeLayout>
-
