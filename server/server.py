@@ -1,10 +1,13 @@
-import socket, select, time, sqlite3, logging, sys
+import socket, select, time, sqlite3, logging, sys, threading
 
 class ApplicationServer():
     
     def __init__(self):
         
         self.ID = 'S'
+        self.num_pics = 0
+        self.pics_on_file = []
+        self.mobile_socket = None
 
         self.init_log()
         self.init_db()        
@@ -25,19 +28,26 @@ class ApplicationServer():
     """
     def init_db(self):
         
-        self.conn = sqlite3.connect("server.db")
-        self.curr = self.conn.cursor()
+        conn = sqlite3.connect("server.db")
+        curr = conn.cursor()
         
         try:
             # note: Access_Level ranked low to high; 1 to 3            
-            self.curr.execute('CREATE TABLE Users (Name TEXT, Pass INTEGER, Date_Added TEXT, Access_Level INTEGER, PRIMARY KEY (Pass))')
+            curr.execute('CREATE TABLE Users (Name TEXT, Pass INTEGER, Date_Added TEXT, Access_Level INTEGER, PRIMARY KEY (Pass))')
+            # $ FOR TESTING ENTRIES HAVE BEEN ADDED
+            curr.execute('INSERT INTO Users VALUES("bigdaddy6969", 8008, "09-11-2018", 3)')
+            curr.execute('INSERT INTO Users VALUES("cheesewick", 1234, "28-11-2018", 1)')
+            curr.execute('SELECT * FROM Users')
+            print("DEBUG: " + curr.fetchall())
         
         except sqlite3.OperationalError:
-            d = {'identifier': '{}'.format(self.ID)}
-            self.log.error(self.formatter.formatException(sys.exc_info()), extra=d)
+            self.log_it(sys.exc_info())
+
         
-        # $ FOR TESTING 1 ENTRY HAS BEEN ADDED
-        self.curr.execute('INSERT INTO Users VALUES("bigdaddy6969", 8008, "09-11-2018", 3)')
+
+        conn.commit()
+        conn.close()
+        
     
     """
     init logging
@@ -50,112 +60,150 @@ class ApplicationServer():
                              )        
         self.log = logging.getLogger()       
         self.formatter = logging.Formatter("\%(asctime)s \%(levelname)s \%(identifier)s \%(message)s\n")
-    
+                    
+
+
     """
     main loop
     """
     def run(self):
-        self.client_sockets.append(self.server_socket)
-        
+
         print("DEBUG: running")
-        while True:
+        print("DEBUG: server is listening")
         
-            rsockets, wsockets, esockets = select.select(self.client_sockets, [], [], 0)
-        
-            for socket in rsockets:        
-                if socket == self.server_socket:
-                    print(1) 
-                    client_socket, client_address = self.server_socket.accept()
-                    print(client_address)
-                    self.client_sockets.append(client_socket)                   
-                    
-                else:                    
-                    try:
-                        print(2)
-                        msg = socket.recv(4096)                        
-                        print(msg)
-                        print(msg.decode())
+        running = True
+
+        while running:
+
+            client_socket, client_address = self.server_socket.accept()
+            
+            try:
+                threading.Thread(target=self.client_thread, args=(client_socket, client_address)).start()
+
+            except:
+                self.log_it(sys.exc_info())
+
+        self.server_socket.close()
+
+
+
+
+
+    def client_thread(self, socket, address):
+        print("DEBUG: connected to {}:{}".format(address[0], address[1]))
+        connected = True
+
+        while connected:
+            msg = socket.recv(4096)                        
+            print("DEBUG: ".format(msg))
+            
+            if msg:                            
+                msg_header, msg_str, msg_sender = self.parse_packet(msg)
+                
+                if msg_header == "CMD":                        
+                    if msg_str == "PIN CHECK":
+                        # get ready to receive pin
                         
-                        if msg:                            
-                            msg_header, msg_str, msg_sender = self.parse_packet(msg)
+                        socket.sendall(self.make_packet("ACK", "PIN CHECK"))
                             
-                            if msg_header == "CMD":
-                                
-                                if msg_str == "PIN CHECK":
-                                    # get ready to receive pin
-                                    
-                                    socket.sendall(self.make_packet("ACK", "PIN CHECK"))
-                                        
-                                    
-                                    pin = socket.recv(4096)
-                                    
-                                    if pin:
-                                        pin_header, pin_str, pin_sender = self.parse_packet(pin)
-                                        
-                                        if pin_header == "DATA":                                                
-                                            name = self.search_db(int(pin_str))
-                                        
-                                            if name:
-                                                socket.sendall(self.make_packet("DATA", name))
-                                            
-                                            else:
-                                                socket.sendall(self.make_packet("DATA", "PIN CHECK FAIL"))                                    
-                                
-                                try:
-                                    msg_str, door_number = msg_str.split('&')
-
-                                    if msg_str == "LOCK DOOR":
-                                        # get ready to lock door
-                                    
-                                        socket.sendall(self.make_packet("ACK", "LOCK DOOR"))
-                                    
-                                        print("BIRAT LOCK")
-                                
-                                    elif msg_str == "UNLOCK DOOR":
-                                        # get ready to unlcok door
-
-                                        socket.sendall(self.make_packet("ACK", "UNLOCK DOOR"))
-
-                                        print("BIRAT UNLOCK")
-
-                                except Exception as e:
-                                    print(e)
-                                    
-
-                            
-                            elif msg_header == "ERROR":
-                                d = {'identifier': '{}'.format(msg_sender)}
-                                self.log.error(msg_str, extra=d)
-                                pass
-                                
-                            else:
-                                print("GOT THIS")
-                                socket.sendall(self.make_packet("ERROR", "INVALID PROTOCOL"))
                         
+                        pin = socket.recv(4096)
+                        
+                        if pin:
+                            pin_header, pin_str, pin_sender = self.parse_packet(pin)
+                            
+                            if pin_header == "DATA":                                                
+                                name = self.search_db(int(pin_str))
+                            
+                                if name:
+                                    socket.sendall(self.make_packet("DATA", name))
+                                
+                                else:
+                                    socket.sendall(self.make_packet("DATA", "PIN CHECK FAIL"))                                    
                     
-                    except Exception as e:
-                        print(3)
-                        print(e)
-                        d = {'identifier': '{}'.format(self.ID)}
-                        self.log.error(self.formatter.formatException(sys.exc_info()), extra=d)
-                        continue
+                    
+                    
+                    elif msg_str == "BUZZ":
+                        
+                        socket.sendall(self.make_packet("ACK", "BUZZ"))
+                        pic = socket.recv(1024)
+                        self.num_pics += 1
+                        pic_file = open("{}.png".format(self.num_pics), 'wb')
+                        
+                        while pic:
 
-                    finally:
-                        print(4)
+                            pic_file.write(bytes(pic))
+                            pic = socket.recv(1024)
+                            
+
+                        socket.sendall(self.make_packet("DATA", "RECEIVED"))
+
+                        self.pics_on_file.append(self.num_pics)
+                        pic_file.close()
+                        
+                    elif msg_str == "SHUTTING DOWN":
                         socket.close()
-                        self.client_sockets.remove(socket)
-        
-        self.server_socket.close()                
+                        connected = False
+                        
+                    """   
+                    try:
+                        msg_str, door_number = msg_str.split('&')
+
+                        if msg_str == "LOCK DOOR":
+                            # get ready to lock door
+
+                            print(self.num_pics)
+                            socket.sendall(self.make_packet("ACK", "LOCK DOOR"))
+                            file = open("{}.png".format(self.num_pics), 'rb')
+
+                            file_bytes = file.read()
+                            
+                            socket.sendall(file_bytes)
+
+                            file.close()
+                            
+                            
+                        
+                            print("BIRAT LOCK")
+                    
+                        elif msg_str == "UNLOCK DOOR":
+                            # get ready to unlock door
+
+                            socket.sendall(self.make_packet("ACK", "UNLOCK DOOR"))
+
+                            print("BIRAT UNLOCK")
+
+                    except Exception as e:
+                        pass
+                    """
+
+
+
+
+
+
+
+    """
+    UTILITY FUNCTIONS
+    """
+
+
     
     """
     search database for specified query, currently only searches for PIN
     """
     def search_db(self, query):
+
+        conn = sqlite3.connect("server.db")
+        curr = conn.cursor()
+
+        #curr.execute('SELECT * FROM Users')
         
-        self.curr.execute('SELECT Name FROM Users WHERE Pass = "{}" '.format(query))
+        curr.execute('SELECT Name FROM Users WHERE Pass = "{}" '.format(query))
         
         # $ will later change to iterate over the cursor
-        fetch = str(self.curr.fetchall())
+        fetch = str(curr.fetchall())
+        print("DEBUG: fetched -> " + fetch)
         
         fetch = fetch.replace("(", "")
         fetch = fetch.replace(")", "")
@@ -182,4 +230,16 @@ class ApplicationServer():
     def parse_packet(self, data):
         
         return data.decode().split('\x00')
+
+
+    """
+    log an error
+    """
+    def log_it(self, error_info):
+        d = {'identifier': '{}'.format(self.ID)}
+        self.log.error(self.formatter.formatException(error_info), extra=d)
+
+    
+
+    
         
