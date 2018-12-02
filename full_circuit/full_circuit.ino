@@ -1,6 +1,11 @@
 #include <Keypad.h>   //Keypad libraries
 #include <Wire.h> //Wire Pin Libararies
 #include <LiquidCrystal_I2C.h> //LCD libraries
+#include <Adafruit_Fingerprint.h> //Fingerprint libraries
+#include <SoftwareSerial.h>
+SoftwareSerial mySerial(14,15);
+
+Adafruit_Fingerprint finger = Adafruit_Fingerprint(&mySerial);
 
 //Definitions for Stepper Motor
 #define IN1  2
@@ -16,6 +21,7 @@ int revolutionSteps = 4096;   //Amount of steps required to complete a full 360 
 int motorSteps = 0;           //going through 7 different cases to send voltages to certain pins on the motor
 String pinCode = "";          //the pin that is entered on the keypad
 String packetReceieved = "";  //the string packet that is receieved from the RPi
+int loopFinger = true;
 
 //Set up Keypad
 const byte ROWS = 4; //four rows
@@ -38,6 +44,7 @@ Keypad myKeypad = Keypad( makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS);
 void setup()
 {
   Serial.begin(9600); //sets data rate
+  finger.begin(57600);
 
   //Set Motor driver pins as output pins (sent voltages to pin)
   pinMode(IN1, OUTPUT); 
@@ -50,6 +57,29 @@ void setup()
 }
 
 void loop() {
+  if (findFingerMatch() == true && loopFinger == true) {
+    AccessGranted("");
+    welcome();
+  }
+  if (findFingerMatch() == true && loopFinger == false) {
+      lcd.clear();
+      lcd.print("Add new user");
+      lcd.setCursor(0,1);
+      lcd.print("Enter ID");
+      char idKey = myKeypad.waitForKey();
+      if (idKey == '0' || idKey == '1' || idKey == '2' || idKey == '3' || idKey == '4' || idKey == '5' || idKey == '6' || idKey == '7' || idKey == '8' || idKey == '9') {
+        lcd.clear();
+        lcd.print("New User ID");
+        lcd.setCursor(0,1);
+        lcd.print(idKey);
+        int id = idKey - '0';
+        while (loopFinger == false) {
+          getFingerprintEnroll(id); 
+        }
+      }
+      delay(2000);
+      welcome();
+  }
   char keyPressed = myKeypad.getKey();             //Get the key value
   perform (keyPressed);                            //Calling function to see what button is pressed
   if (Serial.available() > 0) {                    //Checking to see if anything is being sent to the Arduino from the RPi
@@ -84,6 +114,83 @@ void loop() {
   }
 }
 
+uint8_t getFingerprintEnroll(int id) {
+  int p = -1; 
+  while (p != FINGERPRINT_OK) {
+    p = finger.getImage();
+    switch (p) {
+    case FINGERPRINT_OK:
+      //Serial.println("Image taken");
+      break;
+    case FINGERPRINT_NOFINGER:
+      //Serial.print(".");
+      break;
+    case FINGERPRINT_PACKETRECIEVEERR:
+      //Serial.println("Communication error");
+      break;
+    case FINGERPRINT_IMAGEFAIL:
+      //Serial.println("Imaging error");
+      break;
+    default:
+      //Serial.println("Unknown error");
+      break;
+    }
+  }
+  lcd.clear();
+  lcd.print("Image Taken");
+  p = finger.image2Tz(1);
+  lcd.clear();
+  lcd.print("Remove finger");
+  delay(2000);
+  p = 0;
+  p = finger.getImage();
+  p = -1;
+  lcd.clear();
+  lcd.print("Scan again");
+ while (p != FINGERPRINT_OK) {
+    p = finger.getImage();
+    switch (p) {
+    case FINGERPRINT_OK:
+      //Serial.println("Image taken");
+      break;
+    case FINGERPRINT_NOFINGER:
+      //Serial.print(".");
+      break;
+    case FINGERPRINT_PACKETRECIEVEERR:
+      //Serial.println("Communication error");
+      break;
+    case FINGERPRINT_IMAGEFAIL:
+      //Serial.println("Imaging error");
+      break;
+    default:
+      //Serial.println("Unknown error");
+      break;
+    }
+  }
+  p = finger.image2Tz(2);
+  p = finger.createModel();
+  p = finger.storeModel(id);
+  lcd.clear();
+  lcd.print("Done");
+  loopFinger = true;
+}
+
+// returns -1 if failed, otherwise returns 1
+bool findFingerMatch() {
+  uint8_t p = finger.getImage();
+  if (p != FINGERPRINT_OK)  return false;
+
+  p = finger.image2Tz();
+  if (p != FINGERPRINT_OK)  return false;
+
+  p = finger.fingerFastSearch();
+  if (p != FINGERPRINT_OK)  return false;;
+
+  return true;
+  
+  //return finger.fingerID; 
+}
+
 //
 void welcome(){
   lcd.clear();
@@ -108,7 +215,7 @@ void AccessGranted(String packetReceieved) {
     }
     lcd.setCursor(0,1);
     lcd.print("Door Locking");
-    Serial.println("ACK&Done"); //Send acknowledgement packet once door was unlocked then locked
+    //Serial.println("ACK&Done"); //Send acknowledgement packet once door was unlocked then locked
     rotateClockwise();
 }
 
@@ -143,12 +250,8 @@ void perform (char keyPressed) {
   //If the lock door button was pressed on the keypad
   else if (keyPressed == 'A') {
     lcd.clear();
-    lcd.print("Locking Door");
-    rotateClockwise(); //Lock Door
-    lcd.clear();
-    lcd.print("Door Locked");
-    delay(2000);
-    welcome();
+    lcd.print("Scan finger");
+    loopFinger = false;
     pinCode = "";
   }
 }
