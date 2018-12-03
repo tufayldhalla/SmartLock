@@ -11,8 +11,8 @@ class Arduino:
     
     def __init__(self):
         
-        self.serial = serial.Serial(config.arduino_serial_port,
-                                    config.arduino_baud, 
+        self.serial = serial.Serial(port=config.arduino_serial_port,
+                                    baudrate=config.arduino_baud,
                                     timeout=config.arduino_timeout)    
     
     
@@ -32,21 +32,3 @@ class Arduino:
         return (self.serial.readline().decode()).rstrip("\r\n")
     
     
-    
-"""
-Print Reader Handler Class
-"""
-class PrintReader:
-    
-    def __init__(self, connection):
-        
-        self.connection = connection
-        
-    
-    """
-    Fingerprint Profile Definition
-    """
-    class FProfile:
-        
-        def __init__(self):
-            pass

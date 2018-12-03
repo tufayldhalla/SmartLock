@@ -1,7 +1,6 @@
 import socket, time, serial, sys, logging
 from components.camera import Camera
 from components.devices import Arduino
-from components.devices import PrintReader
 from components import config
 
 """
@@ -14,164 +13,278 @@ class DoorLock:
 
         # device setup
         self.camera = Camera()
-        self.print_reader = PrintReader(config.print_reader_connection)
         self.debug = debug
         self.testing = testing
         self.formatter = logging.Formatter("\%(asctime)s \%(levelname)s \%(identifier)s \%(message)s\n")
         self.ID = ID
-
+        
+        # is arduino connected to serial port?
         if self.debug == 'n':
-            self.arduino = Arduino()        
-                
-        # server connection setup
+            self.arduino = Arduino()       
+        
+        # connect to server
+        self.init_conn()
+       
+    """
+    init server connection
+    """
+    def init_conn(self):
         SERVER_ADDRESS = '192.168.0.21'
-        PORT = 2018
+        PORT = 8018
+        SERVER_PASSWORD = "biratkingofcomedy"        
+        connected = False
         
         if self.testing == 'n':
-            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.socket.connect((SERVER_ADDRESS, PORT))
             
-
-
+            while not connected:
+                self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                
+                try:
+                    self.socket.connect((SERVER_ADDRESS, PORT))
+                    
+                    # server verification
+                    self.socket.sendall(self.make_packet("DATA", SERVER_PASSWORD))
+                    
+                    response = self.socket.recv(4096)
+                    
+                    if response:
+                        response_hdr, response_msg, response_sdr = self.parse_packet(response)
+                        
+                        if response_hdr == "ERROR" and response_msg == "IDENTIFY FAILED":
+                            raise Exception("PASSWORD FAIL")
+                        
+                        elif response_hdr == "DATA" and response_msg == "CONNECTED":
+                            connected = True
+                    
+                    else:
+                        raise Exception("CONNECTION FAIL")
+                    
+                
+                except Exception as e:
+                    if e == "PASSWORD FAIL":
+                        print("DEBUG: server connection failed (invalid credentials)")
+                        print("DEBUG: quitting")
+                        break
+                    
+                    else:
+                        print(e)
+                        print("DEBUG: server connection failed (could not connect), trying again in 10s")
+                        time.sleep(10)
+                              
+        else:
+            print("DEBUG: socket setup skipped")
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    """
+    main loop
+    """
     def run(self):
         
         while True:
-            try: # check for exit    
 
-                ################################### ARDUINO ###################################
+            ################################### ARDUINO ###################################
 
+            try:
+                print("DEBUG: running")
+                print("DEBUG: enter pin my guy")
+                if self.debug == 'n':
+                    inp = self.arduino.read()
+                    print(inp)
+                    print(len(inp))
 
-                try:
-                    if self.debug == 'n':
-                        arduino_input_header, arduino_input = (self.arduino.read()).split('&')
-                    
-                    else:
-                        print("DEBUG: running")
-                        print("DEBUG: enter pin my guy")
-                        arduino_input_header = str(input("HEADER: "))
-                        arduino_input = str(input("MSG: "))
-                    print(arduino_input)
-                    print(len(arduino_input))
+                                   
+                else:                    
+                    inp = str(input("Enter Packet (DATA&BUZZ)"))
+                    print(inp)
+                    print(len(inp))
+                
 
-                    
+                if inp:
+                    self.socket.setblocking(True)
+                    arduino_input_header, arduino_input = inp.split('&')
+                
                     if arduino_input_header == "DATA":
                         if arduino_input == "WAKE":
                             # $ wake the reader (not implemented yet)
-                            pass
+                            self.arduino.write("UD")
+                            continue
+                                
                     
                         elif arduino_input == "BUZZ":
                             # $ buzz the owner
                             self.buzz_subroutine()
+                            continue
+                        
+                        elif arduino_input == "FINGER":
+                            # $ fingerprint access
+                            continue
                         
                         else:
-
                             # a PIN was sent by the Arduino
-                            self.socket.sendall(self.make_packet("CMD", "PIN CHECK"))
+                            self.pin_check_subroutine(arduino_input)
+                            continue
                             
-                            response = self.socket.recv(4096)
-                            #print(response)
-                            
-                            if response:
-                                response_header, response_str, response_sender = self.parse_packet(response)
-                                
-                                if response_header == "ACK" and response_str == "PIN CHECK":
-                                    # ready to send PIN to server
-                                    self.socket.sendall(self.make_packet("DATA", arduino_input))
-                                    
-                                    pin_check = self.socket.recv(4096)
-                                    
-                                    if pin_check:
-                                        pin_check_header, pin_check_str, pin_check_sender = self.parse_packet(pin_check)
-                                        
+                
+                ################################### LISTEN FOR COMMAND FROM SERVER ###################################
 
-                                        if pin_check_header == "DATA":
-                                            if pin_check_str == "PIN CHECK FAIL":
-                                                
-                                                print("step off bitch, that pin wrong yo.")
-                                                
-                                                if self.debug == 'n':
-                                                    self.arduino.write("AD" + "step off bitch")
-                                            
-                                            else:
-                                                # PIN was good
-                                                print("welcome {}.".format(pin_check_str))
-                                                
-                                                if self.debug == 'n':
-                                                    self.arduino.write("AG" + pin_check_str)
-                                                
-                                                self.camera.take_picture()
-                                                
-                                        else:
-                                            raise Exception("UNKNOWN DATA RECEIVED FROM SERVER")
-                            
-                                elif response_header == "ERROR":
-                                    raise Exception("AN ERROR PACKET WAS RECEIVED:: {}".format(response_str))  
-                                
-                                else:
-                                    raise Exception("UNKNOWN DATA RECEIVED FROM SERVER")                                
-                                   
-    
-                except:
-                    self.socket.sendall(self.make_packet("ERROR", self.create_log(sys.exc_info())))
-                    #socket.close()
-                    print(sys.exc_info())
+                else:
+                    self.socket.settimeout(1)
+                    ###INCOMPLETE
+
+                    #self.socket.setblocking(False)
                     
-                    
+                    try:
+                        cmd = self.socket.recv(4096)
+                        print(cmd)
 
+                    except socket.timeout:
+                        continue
 
-                ################################### LISTEN FOR COMMAND ###################################
-                try:
-
-                    server_cmd = self.socket.recv(4096)
-    
-                    if server_cmd:
-                        server_cmd_header, server_cmd_msg, server_id = self.parse_packet(server_cmd)
+                    else:                        
+                        cmd_hdr, cmd_msg, cmd_sdr = self.parse_packet(cmd)
                         
-                        if server_cmd_header == "CMD":
+                        if cmd_hdr == "CMD":
 
-                            try:
-                                server_cmd_msg, door_id = server_cmd_msg.split('&')
-    
-                                if server_cmd_msg == "LOCK DOOR":
-                                    
+                            if cmd_msg == "LOCK DOOR":                 
 
-                                    self.socket.sendall(self.make_packet("CMD", "LOCK DOOR&" + door_id))
-    
-                                    if self.debug == 'n':
-                                      
-                                        self.arduino.write("TUFAYL IS HOMO")
-    
-                                    print("DEBUG: TUFAYL IS HOMO")
-    
-                                elif server_cmd_msg == "UNLOCK DOOR":
+                                if self.debug == 'n':                              
+                                    self.arduino.write("LD")
 
-                                    self.socket.sendall(self.make_packet("CMD", "UNLOCK DOOR&" + door_id))
+                                print("DEBUG: locking override finished")
+
+                            elif cmd_msg == "UNLOCK DOOR":
+
+                                if self.debug == 'n':
+                                    self.arduino.write("UD")
+
+                                print("DEBUG: unlocking override finished")
+                      
+            
+            except (KeyboardInterrupt, SystemExit):
+                self.socket.sendall(self.make_packet("CMD", "SHUTTING DOWN"))
+                raise    
+            
+            except Exception as e:
+                print(e)
+                break
     
-                                    if self.debug == 'n':
-                                        self.arduino.write("TUFAYL IS SLIGHTLY HOMO")
-    
-                                    print("DEBUG: TUFAYL IS SLIGHTLY HOMO")
-                            
-                            except:
-                                pass
-                            
-                            
+    """
+    subroutine to handle buzzer
+
+    ###INCOMPLETE
+    """
+    def buzz_subroutine(self):
+        
+        #if self.debug == 'n':
+         #   self.arduino.write("AG")
+        pic_num = self.camera.take_picture()
+
+        print("PIC {}".format(pic_num))       
+        
+        self.socket.sendall(self.make_packet("CMD", "BUZZ"))
+        
+        response = self.socket.recv(4096)
+
+        if response:
+            response_hdr, response_msg, response_sdr = self.parse_packet(response)
+                                
+            if response_hdr == "ACK" and response_msg == "BUZZ":
+                # ready to send picture to server
+
+                pic_file = open("{}.png".format(pic_num), 'rb')
+                pic_bytes = pic_file.read(1024)
+
+                while pic_bytes:
                     
+                    self.socket.send(pic_bytes)
+                    pic_bytes = pic_file.read(1024)
+
+                
+                pic_file.close()
+                
+                confirm = self.socket.recv(4096)
+
+                if confirm:
+                    confirm_hdr, confirm_msg, confirm_sdr = self.parse_packet(confirm)
+                    if confirm_hdr == "DATA" and confirm_msg == "PICTURE RECEIVED":
+                        print("DEBUG: confirmed receive")
+                    
+                    
+
+    """
+    subroutine to handle pin check
+
+    ###INCOMPLETE
+    """
+    def pin_check_subroutine(self, pin):
+        self.socket.sendall(self.make_packet("CMD", "PIN CHECK"))
+                        
+        response = self.socket.recv(4096)
+        
+        if response:
+            response_hdr, response_msg, response_sdr = self.parse_packet(response)
+            
+            if response_hdr == "ACK" and response_msg == "PIN CHECK":
+                # ready to send PIN to server
+                self.socket.sendall(self.make_packet("DATA", pin))
+                
+                pin_check = self.socket.recv(4096)
+                
+                if pin_check:
+                    pin_check_header, pin_check_str, pin_check_sender = self.parse_packet(pin_check)
+                    
+
+                    if pin_check_header == "DATA":
+                        if pin_check_str == "PIN CHECK FAIL":
+                            
+                            print("DEBUG: step off bitch, that pin wrong yo.")
+                            
+                            if self.debug == 'n':
+                                self.arduino.write("AD" + "step off bitch")
+
+                            pic_num = self.camera.take_picture()
+                        
                         else:
-                            self.socket.sendall(self.make_packet("ERROR", "DON'T KNOW WHAT I GOT", self.ID))
-                
-                
-                except:
-                    self.socket.sendall(self.make_packet("ERROR", self.create_log(sys.exc_info()), self.ID))
-                    #socket.close()
-                    print(err)                        
-            
-            
-            except KeyboardInterrupt:
-                self.socket.close()
-                sys.exit(0)
-                
-    
+                            # PIN was good
+                            print("welcome {}.".format(pin_check_str))
+
+                            if self.debug == 'n':
+                                self.arduino.write("AG" + pin_check_str)
+                            
+                            
+                      
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    """
+    UTILITY FUNCTIONS
+    """
+
     """
     make an packet guy
     """
@@ -187,21 +300,11 @@ class DoorLock:
     def parse_packet(self, data):
         
         return data.decode().split('\x00') 
-    
+
+
+    """
+    create log to send to server
+    """
     def create_log(self, exc):
         
-        return self.formatter.formatException(exc)
-                
-
-    def buzz_subroutine(self):
-        
-        if self.debug == 'n':
-            self.arduino.write("AG")
-        
-        self.camera.take_picture()
-
-
-    def pin_check_subroutine(self):
-        pass
-
-
+        return self.formatter.formatException(exc)     
