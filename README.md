@@ -47,8 +47,6 @@ How to deploy
 * **Birat Dhungana** - *Mobile App* - [github](https://github.com/birat7)
 * **Angie Byun** - *Client, Server, Testing* - [github](https://github.com/angiebyun)
 
-See also the list of [contributors](https://github.com/your/project/contributors) who participated in this project.
-
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
