@@ -20,6 +20,7 @@ public class LoginActivity extends AppCompatActivity {
     Button loginButton, cancelButton;
     EditText userName, passWord;
     TextView tx1;
+    TextView tx2;
     int counter =3;
 
     @Override
@@ -32,19 +33,22 @@ public class LoginActivity extends AppCompatActivity {
         userName = (EditText) findViewById(R.id.editText);
         passWord = (EditText) findViewById(R.id.editText2);
         tx1 = (TextView)findViewById(R.id.textView3);
+        tx2= (TextView)findViewById(R.id.textView2);
         tx1.setVisibility(View.GONE);
+        tx2.setVisibility(View.GONE);
 
         loginButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(userName.getText().toString().equals("b") &&
-                        passWord.getText().toString().equals("a")){
-                    Toast.makeText(getApplicationContext(),"Redirecting..",Toast.LENGTH_SHORT).show();
+                if(userName.getText().toString().equals("admin@admin.com") &&
+                        passWord.getText().toString().equals("admin")){
+                    Toast.makeText(getApplicationContext(),"Success!",Toast.LENGTH_SHORT).show();
                     Intent loadMainScreen = new Intent(LoginActivity.this, MainActivity.class);
                     startActivity(loadMainScreen);
                 }else{
                     Toast.makeText(getApplicationContext(),"Wrong Credentials",Toast.LENGTH_SHORT).show();
 
+                    tx2.setVisibility(View.VISIBLE);
                     tx1.setVisibility(View.VISIBLE);
                     tx1.setBackgroundColor(Color.RED);
                     counter--;

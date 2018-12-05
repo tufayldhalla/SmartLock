@@ -12,6 +12,7 @@ public class MainActivity extends AppCompatActivity {
 
     Button door1;
     Button door2;
+    Button user;
 
 
     @Override
@@ -23,6 +24,7 @@ public class MainActivity extends AppCompatActivity {
 
         door1 = (Button) findViewById(R.id.door1button);
         door2 = (Button) findViewById(R.id.door2button);
+        user = (Button) findViewById(R.id.adduser);
 
         door1.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -41,5 +43,14 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(intentloaddoor2);
             }
         });
-    }
+
+        user.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intentloaduseractivity = new Intent(MainActivity.this, AddUserActivity.class);
+                intentloaduseractivity.putExtra("message", "This is here because you clicked button for door 2.");
+                startActivity(intentloaduseractivity);
+            }
+        });
+}
 }

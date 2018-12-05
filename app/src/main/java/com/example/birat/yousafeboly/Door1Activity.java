@@ -5,43 +5,56 @@ import android.app.NotificationManager;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Base64;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewTreeObserver;
 import android.widget.ImageView;
 import android.widget.Button;
+import android.widget.RelativeLayout;
+
 import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
+import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 
 public class Door1Activity extends AppCompatActivity{
     //App variables
-    Button lockButton;
-    Button unlockButton;
+    Button lockButton, unlockButton, pictureButton;
     ImageView doorPicture;
 
     //Sender variables
     String appName = "YSBolt";
     String myIP = "192.168.0.21";
-    int portNum = 2018;
+    String phoneIP = "192.168.0.240";//White phone
+   // String phoneIP = "192.168.0.250";// Black phone
+
+    int portNum = 8018;
+    int phonePort = 2001;
     InetAddress IPADDRESS;
+    InetAddress PHONEIPADDRESS;
     final int DOORNUMBER = 1;
     final String LOCKCOMMAND = "CMD\0LOCK DOOR&" + Integer.toString(DOORNUMBER) + "\0M";
     final String UNLOCKCOMMAND = "CMD\0UNLOCK DOOR&" + Integer.toString(DOORNUMBER) + "\0M";
+    final String PICTURECOMMAND = "CMD\0REQUEST IMAGE&"+ Integer.toString(DOORNUMBER)+"\0M";
 
     //Receiver variables
-    DataOutputStream dataOutputStream = null;
-    DataInputStream dataInputStream = null;
-    Socket socket;
-
+    Socket socket,receivingSocket;
+    ServerSocket ss;
+    DataInputStream dataInputStream;
+    int length;
+    byte [] data;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,60 +66,18 @@ public class Door1Activity extends AppCompatActivity{
         unlockButton = (Button)findViewById(R.id.unlockbutton);
         doorPicture = (ImageView)findViewById(R.id.doorpicture);
 
+
+
         //Create an IPAddress
         try{
             IPADDRESS = InetAddress.getByName(myIP);
+            PHONEIPADDRESS = InetAddress.getByName(phoneIP);
         }catch(UnknownHostException e){
             e.printStackTrace();
         }
 
-        //TODO: Current bitmap too large. Scale picture down and display on the phone(Code Below)
-//        //Receiving a picture on the phone
-//        try {
-//             socket = new Socket(IPADDRESS, portNum);
-//
-//             dataInputStream = new DataInputStream(socket.getInputStream());
-//
-//             String base64Code = dataInputStream.readUTF();
-//
-//             Log.d("String", ":" + base64Code);
-//
-//             byte[] decodedString = null;
-//             try{
-//                 decodedString = Base64.decode(base64Code, Base64.DEFAULT);
-//             }catch (Exception e){
-//                 e.printStackTrace();
-//                 Log.d("ERROR HERE", "" + e);
-//             }
-//             Log.d("St--",":" +decodedString.length);
-//
-//            Bitmap bitmap = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
-//            doorPicture.setImageBitmap(bitmap);
-//
-//        }catch(UnknownHostException e) {
-//            e.printStackTrace();
-//        }catch (Exception e ){
-//            e.printStackTrace();
-//        }finally {
-//            if(socket != null){
-//                try{
-//                    socket.close();
-//                }catch(IOException e){
-//                    e.printStackTrace();
-//                }
-//            }//end if - Socket
-//
-//            if(dataInputStream != null){
-//                try{
-//                    dataInputStream.close();
-//                }catch(IOException e){
-//                    e.printStackTrace();
-//                }
-//            }//end if - dataInputStream
-//
-//        }//end finally
-
-
+        Thread pictureThread = new Thread(new Receiver());
+        pictureThread.start();
 
         lockButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -116,7 +87,6 @@ public class Door1Activity extends AppCompatActivity{
                 Thread lockSender = new Thread(new Sender(IPADDRESS, portNum, LOCKCOMMAND));
                 lockSender.start();
 
-
                 //Notification after door has been locked.
                 NotificationManager notif = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
                 Notification notify = new Notification.Builder(getApplicationContext()).setContentTitle("Door Locked!").setContentText("Door 1 is now locked.").setContentTitle(appName)
@@ -124,7 +94,6 @@ public class Door1Activity extends AppCompatActivity{
 
                 notify.flags |= Notification.FLAG_AUTO_CANCEL;
                 notif.notify(0, notify);
-
             }
         });
 
@@ -145,6 +114,7 @@ public class Door1Activity extends AppCompatActivity{
                 notifUN.notify(0, notifyUN);
             }
         });
+
 
     }//end onCreate
 
@@ -169,13 +139,22 @@ public class Door1Activity extends AppCompatActivity{
             this.message=message;
         }
 
+        /**
+         * Setter method to set message.
+         *
+         * @param m
+         */
+        public void setMessage(String m){
+            message = m;
+        }
+
         @Override
         public void run() {
 
             try {
 
                 try{
-                    Socket socket = new Socket(ip, port);
+                    socket = new Socket(ip, port);
                 }catch (SocketException e){
                     e.printStackTrace();
                 }
@@ -193,7 +172,7 @@ public class Door1Activity extends AppCompatActivity{
                     messageReceived = in.readLine();
                     System.out.println("Ack packet received:   " + messageReceived);
 
-                    socket.close();
+                  //  socket.close();
 
                 }//end while(true)
             } catch (Exception e) {
@@ -203,5 +182,68 @@ public class Door1Activity extends AppCompatActivity{
         }//end run
 
     }//end the nested class Sender
+
+    public class Receiver implements Runnable{
+
+        @Override
+        public void run(){
+            try{
+                ss = new ServerSocket(phonePort, 535055, PHONEIPADDRESS);
+                while (true){
+                    receivingSocket = ss.accept();
+                    final InputStream in = receivingSocket.getInputStream();
+                    dataInputStream = new DataInputStream(in);
+
+                    length = dataInputStream.readInt();
+                    data = new byte[535055];
+
+                    String test = new String(data);
+                    System.out.println("DEBUG: RECEIVED: " + test);
+
+
+                      //  dataInputStream.readFully(data, 0, data.length);
+                        //dataInputStream.readFully(data, 0, 535055);
+                        dataInputStream.read(data);
+                        String print = new String(data);
+                        System.out.println("DEBUG: RECEIVED 2: " + print);
+
+
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            System.out.println("DEBUG CHECK 3: I do get here!");
+                            final RelativeLayout view = (RelativeLayout)findViewById(R.id.doorview);
+
+                              view.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+                                  @SuppressWarnings("deprecation")
+                                  @Override
+                                  public void onGlobalLayout() {
+                                      view.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+                                      System.out.println(view==null ? "is null" : "not null");
+                                      Bitmap bitmap = Bitmap.createBitmap(view.getWidth(), view.getHeight(), Bitmap.Config.ARGB_8888);
+                                      Canvas c = new Canvas(bitmap);
+                                      view.layout(view.getLeft(), view.getTop(), view.getRight(), view.getBottom());
+                                      view.draw(c);
+                                      doorPicture.setImageBitmap(bitmap);
+                                  }
+                              });
+                           //  Bitmap bitmap = BitmapFactory.decodeByteArray(data,0,535055);
+                            // doorPicture.setImageBitmap(bitmap);
+
+                            try {
+                                dataInputStream.close();
+                                in.close();
+                            }catch (Exception e){
+                                e.printStackTrace();
+                            }
+                        }
+                    });
+                }
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+
+        }
+    }//end of nested receiver class
 
 }//end the Door1Activity class

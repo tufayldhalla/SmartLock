@@ -25,8 +25,10 @@ public class Door2Activity extends AppCompatActivity {
     final String lockCommand = "CMD\0LOCK DOOR&" + Integer.toString(DOORNUMBER) + "\0M";
     final String unlockCommand = "CMD\0UNLOCK DOOR&" + Integer.toString(DOORNUMBER) + "\0M";
     InetAddress IPADDRESS;
-    int portNum = 2018;
+    int portNum = 8018;
     String myIP = "192.168.0.21";
+    String phoneIP = "192.168.0.240";//WHite phone
+    // String phoneIP = "192.168.0.250";// Black phone
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

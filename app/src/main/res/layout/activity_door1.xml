@@ -4,6 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:id="@+id/doorview"
     tools:context=".Door1Activity">
 
     <ImageView
@@ -52,8 +53,8 @@
 
     <ImageView
         android:id="@+id/doorpicture"
-        android:layout_width="wrap_content"
-        android:layout_height="200dp"
+        android:layout_height="100dp"
+        android:layout_width="100dp"
         android:layout_below="@id/Picture"
         android:src="@drawable/door_image"/>
 
@@ -71,5 +72,6 @@
         android:id="@+id/unlockbutton"
         android:layout_toRightOf="@id/lockbutton"
         android:layout_below="@id/doorpicture"/>
+
 
 </RelativeLayout>
