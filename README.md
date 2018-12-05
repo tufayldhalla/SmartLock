@@ -3,6 +3,7 @@
 3rd - Year Project Course (SYSC3010)
 
 Traditional products are increasingly being replaced with various, sometimes complicated, consumer grade electronics. The You Safe Bolt provides the benefit of having everything needed to secure a home in one place, centralized on the in-home server and accessible at any point through the mobile phone app. There is no need for keys, remembering passcodes, or proximity access key fobs. However, the system can be customized to use a passcode at any point.  
+
 There are three ways to access the lock:  
  1) Fingerprint Scanner 
  2) Mobile App (YSBolt) 
@@ -22,7 +23,7 @@ There are three ways to access the lock:
 * Stepper Motor
 
 
-### Setup Notes
+## Setup Notes
 
 Setup notes
 
@@ -36,7 +37,7 @@ More
 more setup
 ```
 
-## Deployment
+### Deployment
 
 How to deploy
 
