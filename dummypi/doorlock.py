@@ -1,32 +1,33 @@
+# Author: Angie Byun
+
 import socket, time, serial, sys, logging
 from components.camera import Camera
 from components.arduino import Arduino
 
 
 """
-DoorLock Class (RPi3)
+Dummypi DoorLock Class (RPi2)
 """
 class DoorLock:
     
     def __init__(self, ID, debug, testing):
-        
 
-        # device setup
+        # Device Setup
         self.camera = Camera()
         self.debug = debug
         self.testing = testing
         self.formatter = logging.Formatter("\%(asctime)s \%(levelname)s \%(identifier)s \%(message)s\n")
         self.ID = ID
         
-        # is arduino connected to serial port?
+        # Arduino Debug
         if self.debug == 'n':
             self.arduino = Arduino()       
         
-        # connect to server
+        # Connect to Server
         self.init_conn()
        
     """
-    init server connection
+    Init Server Connection
     """
     def init_conn(self):
         SERVER_ADDRESS = '192.168.0.21'
@@ -35,14 +36,15 @@ class DoorLock:
         connected = False
         
         if self.testing == 'n':
-            
+
             while not connected:
+                # TCP socket connection 
                 self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 
                 try:
                     self.socket.connect((SERVER_ADDRESS, PORT))
                     
-                    # server verification
+                    # Verifies server
                     self.socket.sendall(self.make_packet("DATA", SERVER_PASSWORD))
                     
                     response = self.socket.recv(4096)
@@ -76,55 +78,53 @@ class DoorLock:
     
     
     
-    
-    
-    
-    
-    
-    
     """
-    main loop
+    Main Loop
     """
     def run(self):
         
         while True:
 
-            ################################### ARDUINO ###################################
+            ##### Arduino #####
 
             try:
-                print("DEBUG: running")
-                print("DEBUG: enter pin my guy")
+                # Enter pin 
+                print("DEBUG: RUNNING")
+                print("DEBUG: Please enter pin: ")
+
+                # input to simulate Arduino 
                 if self.debug == 'n':
                     inp = self.arduino.read()
                     print(inp)
-                    print(len(inp))
+                    print(len(inp[0]))
 
-                
-
-                if inp:
+                if len(inp[0]):
+                    print("in")
                     self.socket.setblocking(True)
                     arduino_input_header, arduino_input = inp[0], inp[1]
-                
+
+                    # the header of the input is DATA
                     if arduino_input_header == "DATA":
+                                
+                        # if the header is DATA and MSG is BUZZ, go through buzz subroutin
                         if arduino_input == "BUZZ":
                             # $ buzz the owner
-                            self.buzz_subroutine()
+                            self.buzzSubroutine()
                             continue
                         
                         else:
-                            # a PIN was sent by the Arduino
-                            self.pin_check_subroutine(arduino_input)
+                            # four digit number is entered (passcode) then go through pin check subroutine
+                            self.pinCheckSubroutine(arduino_input)
                             continue
                             
                 
-                ################################### LISTEN FOR COMMAND FROM SERVER ###################################
+                ##### Listen for command from server #####
 
+                # wait for 1 second to receive 
                 else:
                     self.socket.settimeout(1)
-                    ###INCOMPLETE
-
-                    #self.socket.setblocking(False)
                     
+                    # check if command was received
                     try:
                         cmd = self.socket.recv(4096)
                         print(cmd)
@@ -132,16 +132,18 @@ class DoorLock:
                     except socket.timeout:
                         continue
 
+
                     else:                        
                         cmd_hdr, cmd_msg, cmd_sdr = self.parse_packet(cmd)
-                        
+
+                        # if door is locked from the remote, lock door and print "Door Locked"
                         if cmd_hdr == "CMD":
 
                             if cmd_msg == "LOCK DOOR":                 
 
                                 if self.debug == 'n':                              
                                     self.arduino.write("Door Locked")
-
+                            # if door is unlocked from the remote, door is unlocked and "Door Unlocked" is printed
                             elif cmd_msg == "UNLOCK DOOR":
 
                                 if self.debug == 'n':
@@ -158,15 +160,13 @@ class DoorLock:
                 break
     
     """
-    subroutine to handle buzzer
+    Buzzer Subroutine.
 
-    ###INCOMPLETE
     """
-    def buzz_subroutine(self):
-        
-        #if self.debug == 'n':
-         #   self.arduino.write("AG")
-        pic_num = self.camera.take_picture()
+    def buzzSubroutine(self):
+
+        # preloaded picture is sent to the server
+        pic_num = self.camera.takePicture()
 
         print("PIC {}".format(pic_num))       
         
@@ -178,7 +178,6 @@ class DoorLock:
             response_hdr, response_msg, response_sdr = self.parse_packet(response)
                                 
             if response_hdr == "ACK" and response_msg == "BUZZ":
-                # ready to send picture to server
 
                 pic_file = open("{}.png".format(pic_num), 'rb')
                 pic_bytes = pic_file.read(1024)
@@ -193,6 +192,7 @@ class DoorLock:
                 
                 confirm = self.socket.recv(4096)
 
+                # confirmation message when picture is received at the server end.
                 if confirm:
                     confirm_hdr, confirm_msg, confirm_sdr = self.parse_packet(confirm)
                     if confirm_hdr == "DATA" and confirm_msg == "PICTURE RECEIVED":
@@ -201,11 +201,10 @@ class DoorLock:
                     
 
     """
-    subroutine to handle pin check
+    Pin Check Subroutine to handle pin check.
 
-    ###INCOMPLETE
     """
-    def pin_check_subroutine(self, pin):
+    def pinCheckSubroutine(self, pin):
         self.socket.sendall(self.make_packet("CMD", "PIN CHECK"))
                         
         response = self.socket.recv(4096)
@@ -214,6 +213,7 @@ class DoorLock:
             response_hdr, response_msg, response_sdr = self.parse_packet(response)
             
             if response_hdr == "ACK" and response_msg == "PIN CHECK":
+
                 # ready to send PIN to server
                 self.socket.sendall(self.make_packet("DATA", pin))
                 
@@ -222,17 +222,17 @@ class DoorLock:
                 if pin_check:
                     pin_check_header, pin_check_str, pin_check_sender = self.parse_packet(pin_check)
                     
-
+                    # Wrong pin was entered and access denied message is printed.
                     if pin_check_header == "DATA":
                         if pin_check_str == "PIN CHECK FAIL":
                             
-                            print("DEBUG: step off bitch, that pin wrong yo.")
+                            print("DEBUG: wrong pin, go away.")
 
-
-                            pic_num = self.camera.take_picture()
+                            # Take a picture and send it to server
+                            pic_num = self.camera.takePicture()
                         
                         else:
-                            # PIN was good
+                            # Correct pin was entered and access was granted.
 
                             if self.debug == 'n':
                                 self.arduino.write("AG" + pin_check_str)
@@ -240,12 +240,11 @@ class DoorLock:
                             
 
 
-    """
-    UTILITY FUNCTIONS
-    """
+   ##### Utility Functions #####
+
 
     """
-    make an packet guy
+    Make packet.
     """
     def make_packet(self, type, data):
 
@@ -253,7 +252,7 @@ class DoorLock:
 
     
     """
-    deconstruct packet
+    Deconstruct packet.
 
     """
     def parse_packet(self, data):
@@ -262,7 +261,7 @@ class DoorLock:
 
 
     """
-    create log to send to server
+    Create log to send to server.
     """
     def create_log(self, exc):
         
