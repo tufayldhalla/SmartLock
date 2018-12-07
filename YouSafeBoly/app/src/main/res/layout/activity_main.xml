@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity">
+
+    <ImageView
+        android:id="@+id/Background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/background"
+        android:scaleType="centerCrop"/>
+
+    <TextView
+        android:text="YSBolt"
+        android:id="@+id/Name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="cursive"
+        android:paddingLeft="5dp"
+        android:layout_centerHorizontal="true"
+        android:textColor="@color/colorPrimaryDark"
+        android:textStyle="bold"
+        android:textSize="36sp"/>
+
+    <ImageView
+        android:id="@+id/Logo"
+        android:layout_width="100dp"
+        android:layout_height="50dp"
+        android:layout_toRightOf="@id/Name"
+        android:src="@drawable/jokelogo"/>
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Click here to check on door 1!"
+        android:id="@+id/door1button"
+        android:layout_below="@id/Name"
+        android:layout_centerHorizontal="true"
+        android:scaleType="centerCrop"
+        android:contextClickable="true"/>
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Click here to check on door 2!"
+        android:id="@+id/door2button"
+        android:layout_below="@id/door1button"
+        android:layout_centerHorizontal="true"
+        android:scaleType="centerCrop"
+        android:contextClickable="true"/>
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Add a user."
+        android:id="@+id/adduser"
+        android:layout_below="@id/door2button"
+        android:layout_centerHorizontal="true"/>
+
+</RelativeLayout>
