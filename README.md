@@ -6,7 +6,7 @@ Traditional products are increasingly being replaced with various, sometimes com
 
 There are three ways to access the lock:  
  1) Fingerprint Scanner 
- 2) Mobile App (YSBolt) 
+ 2) Mobile App (You Safe Bolt) 
  3) Passcode 
 
 
