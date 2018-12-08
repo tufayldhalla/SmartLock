@@ -25,7 +25,7 @@ There are three ways to access the lock:
 
 ## Setup Notes
 
-Server RPi Setup
+**Server RPi Setup**
 
 The server RPi was configured to use a static IP over a wired interface. To do this, add these lines to the following files (you can use nano or vim from a terminal). 
 
@@ -42,7 +42,7 @@ static routers=192.168.0.1
 static domain_name_servers=192.168.0.1
 ```
 
-Client RPi Setup
+**Client RPi Setup**
 
 The client RPi can be configured to use a static IP as well however it is not necessary. The interface is wireless in this case. 
 
