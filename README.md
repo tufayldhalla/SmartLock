@@ -18,28 +18,57 @@ There are three ways to access the lock:
 * Raspberry Pi 1, Raspberry Pi 3B, Raspberry Pi 2
 * Arduino Uno
 * Adafruit ZFM-20 Fingerprint Sensor
-* 16x16 Keypad
-* LCD
+* 4x4 Keypad
+* 16x2 LCD
 * Stepper Motor
 
 
 ## Setup Notes
 
-Setup notes
+Server RPi Setup
 
+The server RPi was configured to use a static IP over a wired interface. To do this, add these lines to the following files (you can use nano or vim from a terminal). 
+
+/etc/network/interfaces
 ```
-setup
+iface eth0 inet manual
 ```
 
-More
+/etc/dhcpcd.conf
+```
+interface eth0
+static ip_address=192.168.0.21/24
+static routers=192.168.0.1
+static domain_name_servers=192.168.0.1
+```
 
+Client RPi Setup
+
+The client RPi can be configured to use a static IP as well however it is not necessary. The interface is wireless in this case. 
+
+/etc/network/interfaces
 ```
-more setup
+iface wlan0 inet manual
 ```
+
+/etc/dhcpcd.conf
+```
+interface wlan0
+static ip_address=192.168.0.220/24
+static routers=192.168.0.1
+static domain_name_servers=192.168.0.1
+```
+
+The final step necessary is to ensure that the camera is enabled. You can check by typing -sudo raspi-config in a terminal, and navigating to "Interfacing Options".
 
 ### Deployment
 
-How to deploy
+This system is intended to be used on a local area network. A wireless router is recommended. 
+
+To deploy this system: 
+* download the lock directory onto the client RPi, and the server directory onto the server RPi
+* connect all hardware
+* run main.py for each RPi 
 
 ## Authors
 
@@ -53,3 +82,5 @@ How to deploy
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details
 
 ## Acknowledgments
+
+* Ksheel for the 3D print
