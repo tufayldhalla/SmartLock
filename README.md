@@ -72,10 +72,10 @@ To deploy this system:
 
 ## Authors
 
-* **Martin Klamrowski** - *Client, Server* - [github](https://github.com/martinklamrowski)
-* **Tufayl Dhalla** - *Hardware, Arduino* - [github](https://github.com/tufayldhalla)
-* **Birat Dhungana** - *Mobile App* - [github](https://github.com/birat7)
-* **Angie Byun** - *Client, Server, Testing* - [github](https://github.com/angiebyun)
+* **Martin Klamrowski** - *Client, Server*
+* **Tufayl Dhalla** - *Hardware, Arduino*
+* **Birat Dhungana** - *Mobile App*
+* **Angie Byun** - *Client, Server, Testing*
 
 ## License
 
